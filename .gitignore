@@ -1,4 +1,7 @@
+# Files with credentials etc.
 hue2mqtt.toml
+ecosystem.config.js
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
