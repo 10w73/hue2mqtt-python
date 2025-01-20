@@ -42,11 +42,11 @@ class Hue2MQTT:
     config: Hue2MQTTConfig
 
     def __init__(
-        self,
-        verbose: bool,
-        config_file: Optional[str],
-        *,
-        name: str = "hue2mqtt",
+            self,
+            verbose: bool,
+            config_file: Optional[str],
+            *,
+            name: str = "hue2mqtt",
     ) -> None:
         self.config = Hue2MQTTConfig.load(config_file)
         self.name = name
@@ -218,16 +218,19 @@ class Hue2MQTT:
         # Publish updates
         try:
             async for updated_object in self._bridge.listen_events():
-                if isinstance(updated_object, aiohue.groups.Group):
-                    group = GroupInfo(id=updated_object.id, **updated_object.raw)
-                    self.publish_group(group)
-                elif isinstance(updated_object, aiohue.lights.Light):
-                    light = LightInfo(id=updated_object.id, **updated_object.raw)
-                    self.publish_light(light)
-                elif isinstance(updated_object, aiohue.sensors.GenericSensor):
-                    sensor = SensorInfo(id=updated_object.id, **updated_object.raw)
-                    self.publish_sensor(sensor)
-                else:
-                    LOGGER.warning("Unknown object")
+                try:
+                    if isinstance(updated_object, aiohue.groups.Group):
+                        group = GroupInfo(id=updated_object.id, **updated_object.raw)
+                        self.publish_group(group)
+                    elif isinstance(updated_object, aiohue.lights.Light):
+                        light = LightInfo(id=updated_object.id, **updated_object.raw)
+                        self.publish_light(light)
+                    elif isinstance(updated_object, aiohue.sensors.GenericSensor):
+                        sensor = SensorInfo(id=updated_object.id, **updated_object.raw)
+                        self.publish_sensor(sensor)
+                    else:
+                        LOGGER.warning("Unknown object")
+                except IndexError as e:
+                    LOGGER.warning(f"IndexError: {e} - Event data: {updated_object}")
         except GeneratorExit:
             LOGGER.warning("Exited loop")
