@@ -19,8 +19,8 @@ from aiohttp.client import ClientSession
 from pydantic import ValidationError, parse_obj_as
 
 from hue2mqtt import __version__
-from hue2mqtt.messages import BridgeInfo, Hue2MQTTStatus
-from hue2mqtt.schema import (
+from messages import BridgeInfo, Hue2MQTTStatus
+from schema import (
     GroupInfo,
     GroupSetState,
     LightInfo,
@@ -195,25 +195,36 @@ class Hue2MQTT:
         except ValidationError as e:
             LOGGER.warning(f"Invalid light state: {e}")
 
-    async def main(self, websession: ClientSession) -> None:
-        """Main method of the data component."""
+
+async def main(self, websession: ClientSession) -> None:
+    """Main method of the data component."""
+    try:
         # Publish initial info about lights
         for idx, light_raw in self._bridge.lights._items.items():
-            light = LightInfo(id=idx, **light_raw.raw)
-            self.publish_light(light)
+            try:
+                light = LightInfo(id=idx, **light_raw.raw)
+                self.publish_light(light)
+            except Exception as e:
+                LOGGER.warning(f"Error publishing light info: {e}")
 
         # Publish initial info about groups
         for idx, group_raw in self._bridge.groups._items.items():
-            group = GroupInfo(id=idx, **group_raw.raw)
-            self.publish_group(group)
+            try:
+                group = GroupInfo(id=idx, **group_raw.raw)
+                self.publish_group(group)
+            except Exception as e:
+                LOGGER.warning(f"Error publishing group info: {e}")
 
         # Publish initial info about sensors
         for idx, sensor_raw in self._bridge.sensors._items.items():
-            if "uniqueid" in sensor_raw.raw and "productname" in sensor_raw.raw:
-                sensor = SensorInfo(id=idx, **sensor_raw.raw)
-                self.publish_sensor(sensor)
-            else:
-                LOGGER.debug(f"Ignoring virtual sensor: {sensor_raw.name}")
+            try:
+                if "uniqueid" in sensor_raw.raw and "productname" in sensor_raw.raw:
+                    sensor = SensorInfo(id=idx, **sensor_raw.raw)
+                    self.publish_sensor(sensor)
+                else:
+                    LOGGER.debug(f"Ignoring virtual sensor: {sensor_raw.name}")
+            except Exception as e:
+                LOGGER.warning(f"Error publishing sensor info: {e}")
 
         # Publish updates
         try:
@@ -231,6 +242,8 @@ class Hue2MQTT:
                     else:
                         LOGGER.warning("Unknown object")
                 except IndexError as e:
-                    LOGGER.warning(f"IndexError: {e} - Event data: {updated_object}")
+                    LOGGER.warning(f"IndexError: {e} - Event data: {updated_object.raw}")
         except GeneratorExit:
             LOGGER.warning("Exited loop")
+    except Exception as e:
+        LOGGER.error(f"Error in main method: {e}")
